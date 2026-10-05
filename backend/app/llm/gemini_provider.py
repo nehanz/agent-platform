@@ -39,23 +39,25 @@ class GeminiProvider(LLMProvider):
 
         last_error = None
         for model_name in candidates:
-            for attempt in range(2):
-                try:
-                    response = self.client.models.generate_content(
-                        model=model_name,
-                        contents=contents,
-                        config=config,
-                    )
-                    return (response.text or "").strip()
-                except APIError as e:
-                    last_error = e
-                    if getattr(e, "code", None) in (503, 429) or "UNAVAILABLE" in str(e):
-                        time.sleep(1.0)
-                        continue
-                    break
-                except Exception as e:
-                    last_error = e
-                    break
+            try:
+                response = self.client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config,
+                )
+                return (response.text or "").strip()
+            except APIError as e:
+                last_error = e
+                err_msg = str(e)
+                if "RESOURCE_EXHAUSTED" in err_msg or getattr(e, "code", None) == 429:
+                    # Daily quota hit for this model -> try next fallback model immediately
+                    continue
+                if getattr(e, "code", None) in (503, 500) or "UNAVAILABLE" in err_msg:
+                    time.sleep(0.5)
+                    continue
+            except Exception as e:
+                last_error = e
+                continue
 
         if last_error:
             raise last_error
