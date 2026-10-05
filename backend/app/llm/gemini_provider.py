@@ -33,8 +33,8 @@ class GeminiProvider(LLMProvider):
         )
 
         candidates = [self.chat_model]
-        for fallback in ["gemini-2.5-flash", "gemini-2.5-flash-lite"]:
-            if fallback not in candidates:
+        for fallback in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]:
+            if fallback and fallback not in candidates:
                 candidates.append(fallback)
 
         last_error = None

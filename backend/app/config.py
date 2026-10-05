@@ -24,7 +24,7 @@ class Settings:
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "gemini")
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_CHAT_MODEL: str = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.5-flash")
+    GEMINI_CHAT_MODEL: str = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.0-flash")
     GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
     EMBEDDING_DIM: int = int(os.getenv("EMBEDDING_DIM", "768"))
 
