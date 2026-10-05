@@ -1,7 +1,9 @@
+import time
 import numpy as np
 from typing import List, Dict
 from google import genai
 from google.genai import types
+from google.genai.errors import APIError
 
 from .base import LLMProvider
 from app.config import settings
@@ -12,14 +14,11 @@ class GeminiProvider(LLMProvider):
         if not settings.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY is not set")
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self.chat_model = settings.GEMINI_CHAT_MODEL
-        self.embed_model = settings.GEMINI_EMBEDDING_MODEL
+        self.chat_model = settings.GEMINI_CHAT_MODEL or "gemini-3.8-flash"
+        self.embed_model = settings.GEMINI_EMBEDDING_MODEL or "gemini-embedding-001"
         self.embed_dim = settings.EMBEDDING_DIM
 
     def chat(self, messages: List[Dict[str, str]], system: str = "") -> str:
-        import time
-        from google.genai.errors import APIError
-
         contents = []
         for m in messages:
             role = "user" if m["role"] == "user" else "model"
@@ -32,10 +31,10 @@ class GeminiProvider(LLMProvider):
             temperature=0.2,
         )
 
-        primary = self.chat_model if self.chat_model in ("gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash") else "gemini-3.8-flash"
-        candidates = [primary, "gemini-3.7-flash", "gemini-3.5-flash", "gemini-flash-latest"]
-        if self.chat_model and self.chat_model not in candidates:
-            candidates.append(self.chat_model)
+        candidates = [self.chat_model]
+        for fallback in ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-flash-latest"]:
+            if fallback not in candidates:
+                candidates.append(fallback)
 
         last_error = None
         for model_name in candidates:
@@ -50,7 +49,8 @@ class GeminiProvider(LLMProvider):
                 last_error = e
                 err_msg = str(e)
                 if "RESOURCE_EXHAUSTED" in err_msg or getattr(e, "code", None) == 429:
-                    # Daily quota hit for this model -> try next fallback model immediately
+                    continue
+                if "NOT_FOUND" in err_msg or getattr(e, "code", None) == 404:
                     continue
                 if getattr(e, "code", None) in (503, 500) or "UNAVAILABLE" in err_msg:
                     time.sleep(0.5)
@@ -63,12 +63,11 @@ class GeminiProvider(LLMProvider):
             raise last_error
         return ""
 
-
     def embed(self, texts: List[str]) -> List[List[float]]:
         vectors: List[List[float]] = []
         for text in texts:
             last_err = None
-            embed_candidates = [self.embed_model, "text-embedding-004", "gemini-embedding-001", "gemini-embedding-2"]
+            embed_candidates = [self.embed_model, "gemini-embedding-001", "gemini-embedding-2"]
             for model_name in embed_candidates:
                 if not model_name:
                     continue
