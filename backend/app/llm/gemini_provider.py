@@ -67,14 +67,25 @@ class GeminiProvider(LLMProvider):
     def embed(self, texts: List[str]) -> List[List[float]]:
         vectors: List[List[float]] = []
         for text in texts:
-            kwargs = {"model": self.embed_model, "contents": text}
-            if self.embed_dim and "text-embedding" in self.embed_model:
-                kwargs["config"] = {"output_dimensionality": self.embed_dim}
-            result = self.client.models.embed_content(**kwargs)
-            vec = np.array(result.embeddings[0].values, dtype=np.float32)
-            # Gemini-embedding-001 returns unnormalized vectors → normalize for cosine sim
-            norm = np.linalg.norm(vec)
-            if norm > 0:
-                vec = vec / norm
-            vectors.append(vec.tolist())
+            last_err = None
+            embed_candidates = [self.embed_model, "text-embedding-004", "gemini-embedding-001", "gemini-embedding-2"]
+            for model_name in embed_candidates:
+                if not model_name:
+                    continue
+                try:
+                    result = self.client.models.embed_content(
+                        model=model_name,
+                        contents=text,
+                    )
+                    vec = np.array(result.embeddings[0].values, dtype=np.float32)
+                    norm = np.linalg.norm(vec)
+                    if norm > 0:
+                        vec = vec / norm
+                    vectors.append(vec.tolist())
+                    last_err = None
+                    break
+                except Exception as e:
+                    last_err = e
+            if last_err and len(vectors) < len(texts):
+                raise last_err
         return vectors
