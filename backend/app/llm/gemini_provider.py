@@ -32,9 +32,11 @@ class GeminiProvider(LLMProvider):
             temperature=0.2,
         )
 
-        candidates = [self.chat_model]
-        for fallback in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]:
-            if fallback and fallback not in candidates:
+        candidates = []
+        if self.chat_model:
+            candidates.append(self.chat_model)
+        for fallback in ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-flash-latest"]:
+            if fallback not in candidates:
                 candidates.append(fallback)
 
         last_error = None
@@ -49,7 +51,6 @@ class GeminiProvider(LLMProvider):
                     return (response.text or "").strip()
                 except APIError as e:
                     last_error = e
-                    # Retry on 503/429
                     if getattr(e, "code", None) in (503, 429) or "UNAVAILABLE" in str(e):
                         time.sleep(1.0)
                         continue
