@@ -32,12 +32,10 @@ class GeminiProvider(LLMProvider):
             temperature=0.2,
         )
 
-        candidates = []
-        if self.chat_model:
+        primary = self.chat_model if self.chat_model in ("gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash") else "gemini-3.8-flash"
+        candidates = [primary, "gemini-3.7-flash", "gemini-3.5-flash", "gemini-flash-latest"]
+        if self.chat_model and self.chat_model not in candidates:
             candidates.append(self.chat_model)
-        for fallback in ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-flash-latest"]:
-            if fallback not in candidates:
-                candidates.append(fallback)
 
         last_error = None
         for model_name in candidates:
@@ -67,11 +65,10 @@ class GeminiProvider(LLMProvider):
     def embed(self, texts: List[str]) -> List[List[float]]:
         vectors: List[List[float]] = []
         for text in texts:
-            result = self.client.models.embed_content(
-                model=self.embed_model,
-                contents=text,
-                config={"output_dimensionality": self.embed_dim},
-            )
+            kwargs = {"model": self.embed_model, "contents": text}
+            if self.embed_dim and "text-embedding" in self.embed_model:
+                kwargs["config"] = {"output_dimensionality": self.embed_dim}
+            result = self.client.models.embed_content(**kwargs)
             vec = np.array(result.embeddings[0].values, dtype=np.float32)
             # Gemini-embedding-001 returns unnormalized vectors → normalize for cosine sim
             norm = np.linalg.norm(vec)

@@ -8,6 +8,7 @@ from app.rag import retrieve
 from app.tools import execute_tool, TOOLS
 from app.policy import evaluate
 from app.audit import log_event, create_execution, update_execution_status, get_execution
+from app.notify import send_approval_request
 from .prompts import SYSTEM_PROMPT
 
 
@@ -123,6 +124,10 @@ def run_agent(user_message: str, tenant_id: str, history: Optional[list] = None)
         }
         update_execution_status(execution_id, "pending_approval", pending)
         log_event(execution_id, tenant_id, "approval_request", pending)
+        try:
+            send_approval_request(execution_id, tool_name, tool_args, tenant_id)
+        except Exception as e:
+            log_event(execution_id, tenant_id, "sns_notify_error", {"error": str(e)})
         return {
             "execution_id": execution_id,
             "status": "pending_approval",
