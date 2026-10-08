@@ -10,18 +10,30 @@ DATA_DIR.mkdir(exist_ok=True)
 
 
 class Settings:
+    # AWS Cloud Integration
+    USE_AWS: bool = os.getenv("USE_AWS", "false").lower() in ("true", "1", "yes")
+    AWS_REGION: str = os.getenv("AWS_REGION", "us-east-1")
+    DYNAMO_SESSIONS: str = os.getenv("DYNAMO_SESSIONS", "agent_sessions")
+    DYNAMO_AUDIT: str = os.getenv("DYNAMO_AUDIT", "agent_audit")
+    S3_BUCKET: str = os.getenv("S3_BUCKET", "")
+    SQS_URL: str = os.getenv("SQS_URL", "")
+    SNS_ARN: str = os.getenv("SNS_ARN", "")
+
+    # LLM Settings
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini")
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "gemini")
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_CHAT_MODEL: str = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.5-flash")
+    GEMINI_CHAT_MODEL: str = os.getenv("GEMINI_CHAT_MODEL", "gemini-3.8-flash")
     GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
     EMBEDDING_DIM: int = int(os.getenv("EMBEDDING_DIM", "768"))
 
+    # Local Fallback Paths
     FAISS_INDEX_PATH: str = str(BASE_DIR / os.getenv("FAISS_INDEX_PATH", "data/faiss_index"))
     FAISS_METADATA_PATH: str = str(BASE_DIR / os.getenv("FAISS_METADATA_PATH", "data/faiss_metadata.json"))
     SQLITE_AUDIT_DB: str = str(BASE_DIR / os.getenv("SQLITE_AUDIT_DB", "data/audit.db"))
 
+    # Auth & Security
     AUTH_MODE: str = os.getenv("AUTH_MODE", "local")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "dev-secret-change-me")
 
